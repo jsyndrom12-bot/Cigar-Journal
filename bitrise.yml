@@ -1,19 +1,20 @@
 ---
 format_version: '13'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
-project_type: other
+project_type: expo
 workflows:
   primary:
-    description: Build APK with Expo CLI
+    description: Build Android APK with EAS Build
     steps:
     - git-clone@8: {}
     - script@1:
-        title: Setup Node.js
+        title: Setup Node.js & NPM
         inputs:
         - content: |-
             #!/bin/bash
             set -ex
-            # Update npm
+            node --version
+            npm --version
             npm install -g npm@latest
     - script@1:
         title: Install Dependencies
@@ -21,35 +22,20 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-            npm install --legacy-peer-deps
+            npm install
     - script@1:
-        title: Install Expo CLI
+        title: Install EAS CLI
         inputs:
         - content: |-
             #!/bin/bash
             set -ex
-            npm install -g expo-cli
+            npm install -g eas-cli
     - script@1:
-        title: Build Android APK (Local Build)
+        title: Build APK with EAS
         inputs:
         - content: |-
             #!/bin/bash
             set -ex
-            # Build with expo
-            expo prebuild --clean --platform android || true
-            # Build APK using gradle
-            cd android && ./gradlew assembleRelease || echo \"Gradle build attempt completed\"
-    - script@1:
-        title: Find and Copy APK to Artifacts\n
-        inputs:
-        - content: |-\n
-            #!/bin/bash
-            set -ex
-            # Find APK files
-            find \"$BITRISE_SOURCE_DIR\" -name \"*.apk\" -type f 2>/dev/null | while read apk; do
-              echo \"Found APK: $apk\"
-              cp \"$apk\" \"$BITRISE_DEPLOY_DIR/\"
-            done
-            # List artifacts
-            ls -lah \"$BITRISE_DEPLOY_DIR/\" || echo \"No artifacts found yet\"
+            # Build with EAS
+            eas build --platform android --profile preview --non-interactive --output=$BITRISE_DEPLOY_DIR/app.apk
     - deploy-to-bitrise-io@2: {}
