@@ -1,10 +1,10 @@
 ---
 format_version: '13'
 default_step_lib_source: https://github.com/bitrise-io/bitrise-steplib.git
-project_type: expo
+project_type: react-native
 workflows:
   primary:
-    description: Build Android APK with EAS Build
+    description: Build Android APK with Gradle
     steps:
     - git-clone@8: {}
     - script@1:
@@ -22,20 +22,40 @@ workflows:
         - content: |-
             #!/bin/bash
             set -ex
-            npm install
+            npm install --legacy-peer-deps
     - script@1:
-        title: Install EAS CLI
+        title: Install Expo CLI (for prebuild)
         inputs:
         - content: |-
             #!/bin/bash
             set -ex
-            npm install -g eas-cli
+            npm install -g expo-cli
     - script@1:
-        title: Build APK with EAS
+        title: Prebuild Android
         inputs:
         - content: |-
             #!/bin/bash
             set -ex
-            # Build with EAS
-            eas build --platform android --profile preview --non-interactive --output=$BITRISE_DEPLOY_DIR/app.apk
+            cd $BITRISE_SOURCE_DIR
+            expo prebuild --clean --platform android
+    - script@1:
+        title: Build APK with Gradle
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            cd $BITRISE_SOURCE_DIR/android
+            chmod +x gradlew
+            ./gradlew assembleRelease
+    - script@1:
+        title: Copy APK to Deploy Directory
+        inputs:
+        - content: |-
+            #!/bin/bash
+            set -ex
+            find $BITRISE_SOURCE_DIR -name "*.apk" -type f | while read apk; do
+              echo "Found APK: $apk"
+              cp "$apk" "$BITRISE_DEPLOY_DIR/"
+            done
+            ls -lah "$BITRISE_DEPLOY_DIR/"
     - deploy-to-bitrise-io@2: {}
